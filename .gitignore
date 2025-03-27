@@ -1,0 +1,25 @@
+# Python-spezifische Ausschlüsse
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtuelle Umgebung
+venv/
+.env
+
+# Editor-spezifische Dateien
+.vscode/
+.idea/
+
+# Build-/Paketdateien
+*.egg-info/
+dist/
+build/
+
+# Logs und temporäre Dateien
+*.log
+
+data/
+private/
+src/hausverwaltung.egg-info/ 
