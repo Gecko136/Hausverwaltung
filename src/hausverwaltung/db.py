@@ -1,7 +1,7 @@
 import pyodbc
 from hausverwaltung.config import load_config
 
-from models import Mietvertrag, Mieter, Wohnung, Haus, Raum
+from hausverwaltung.models import Mietvertrag, Mieter, Wohnung, Haus, Raum
 
 def get_database_config():
     """
@@ -256,4 +256,3 @@ def add_mieter_to_db(vorname, nachname):
         # Cursor und Verbindung schließen
         cursor.close()
         connection.close()
-

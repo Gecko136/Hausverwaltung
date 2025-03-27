@@ -1,7 +1,7 @@
 # mietvertrag_repository.py
 
-from db import get_mietvertrag, get_mieter, get_wohnungen_pro_haus, get_haus, get_raeume_per_wohnung, get_wohnung
-from models import Mietvertrag, Mieter, Wohnung, Haus, Raum
+from hausverwaltung.db import get_mietvertrag, get_mieter, get_wohnungen_pro_haus, get_haus, get_raeume_per_wohnung, get_wohnung
+from hausverwaltung.models import Mietvertrag, Mieter, Wohnung, Haus, Raum
 
 class MietvertragRepository:
     

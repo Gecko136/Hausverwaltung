@@ -1,8 +1,9 @@
 import configparser
 import os
 
-# Definiere den Pfad zur Konfigurationsdatei
-CONFIG_FILE_PATH = "config.ini"
+# Basisverzeichnis des Projekts ermitteln (Hausverwaltung Root)
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+CONFIG_FILE_PATH = os.path.join(BASE_DIR, "config.ini")
 
 # Stelle sicher, dass die Konfigurationsdatei existiert
 def ensure_config_file():

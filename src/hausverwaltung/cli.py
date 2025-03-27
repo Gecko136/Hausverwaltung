@@ -14,21 +14,35 @@ def import_gnucash(file):
     """Importiert GnuCash-Daten."""
     click.echo(f"Importiere GnuCash-Daten aus {file if file else 'der Standarddatei'}...")
 
-@click.command()
-@click.option('--haus', type=int, help='ID des Hauses')
-@click.option('--mieter', type=int, help='ID des Mieters')
-@click.option('--all', is_flag=True, help='Bericht für alle Mieter des Hauses')
+
+@cli.group()
+def report():
+    """Generate different reports."""
+    pass
+
+@report.group()
+def nebenkosten():
+    """Generate Nebenkosten reports."""
+    pass
+
+@nebenkosten.command('mieter')
+@click.option('--id', type=int, help='ID des Mieters')
+@click.option('--all', is_flag=True, help='Bericht für alle Mieter')
 @click.option('--pdf', is_flag=True, help='Bericht im PDF-Format')
 @click.option('--txt', is_flag=True, help='Bericht als Textausgabe')
-def report(haus, mieter, all, pdf, txt):
-    """Erstellt einen Nebenkostenbericht."""
-    click.echo(f"Erstelle Bericht für Haus {haus} und Mieter {mieter}...")
-    if all:
-        click.echo("Bericht für alle Mieter...")
-    if pdf:
-        click.echo("Bericht im PDF-Format...")
-    if txt:
-        click.echo("Bericht als Textausgabe...")
+def report_mieter(id, all, pdf, txt):
+    """Generate Nebenkosten report for a specific tenant or all tenants."""
+    pass
+
+@nebenkosten.command('haus')
+@click.option('--id', type=int, help='ID des Hauses')
+@click.option('--all', is_flag=True, help='Bericht für alle Häuser')
+@click.option('--pdf', is_flag=True, help='Bericht im PDF-Format')
+@click.option('--txt', is_flag=True, help='Bericht als Textausgabe')
+def report_haus(id, all, pdf, txt):
+    """Generate Nebenkosten report for a specific house or all houses."""
+    pass
+
 
 @click.command()
 @click.option('--haus', is_flag=True, help='Listet alle Häuser auf.')
