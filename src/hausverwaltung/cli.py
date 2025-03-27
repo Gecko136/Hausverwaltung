@@ -1,6 +1,8 @@
 import click
 from hausverwaltung.config import set_gnucash_path, set_db_path, get_gnucash_path, get_db_path, set_config
 from hausverwaltung.db import add_mieter_to_db
+from hausverwaltung.nebenkosten import berechne_nebenkosten, get_test_nebenkosten
+from hausverwaltung.report import create_pdf_nebenkosten_report
 
 
 @click.group()
@@ -25,14 +27,28 @@ def nebenkosten():
     """Generate Nebenkosten reports."""
     pass
 
-@nebenkosten.command('mieter')
-@click.option('--id', type=int, help='ID des Mieters')
+@nebenkosten.command('mietvertrag')
+@click.option('--id', type=int, help='ID des Mietvertrags', required=True)
+@click.option('--jahr', type=int, required=True, help='Abrechnungsjahr', prompt='Abrechnungsjahr')
 @click.option('--all', is_flag=True, help='Bericht für alle Mieter')
 @click.option('--pdf', is_flag=True, help='Bericht im PDF-Format')
 @click.option('--txt', is_flag=True, help='Bericht als Textausgabe')
-def report_mieter(id, all, pdf, txt):
-    """Generate Nebenkosten report for a specific tenant or all tenants."""
-    pass
+def nebenkosten_mietvertrag(id, jahr, all, pdf, txt):
+    """Erstellt eine Nebenkostenabrechnung für einen Mietvertrag."""
+    # Vorauszahlungen müssen noch aus der DB geholt werden
+    vorauszahlungen = 0  # TODO: Hier echte Werte holen
+
+    # nebenkosten = berechne_nebenkosten(id, jahr, vorauszahlungen)
+    nebenkosten = get_test_nebenkosten()
+
+    if pdf:
+        filename = f"nebenkosten_mietvertrag_{id}_{jahr}.pdf"
+        create_pdf_nebenkosten_report(nebenkosten, filename)
+        click.echo(f"PDF gespeichert als {filename}")
+    elif txt:
+        click.echo("Noch nicht implementiert: Textausgabe.")
+    else:
+        click.echo("Bitte --pdf oder --txt angeben.")
 
 @nebenkosten.command('haus')
 @click.option('--id', type=int, help='ID des Hauses')

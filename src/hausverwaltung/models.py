@@ -10,12 +10,12 @@ class Raum:
 
 @dataclass
 class Wohnung:
-    einheit_id: int
-    etage: int
+    wohnung_id: int
+    etage: str
     lage_im_haus: str
     groesse: float  # tatsächliche Quadratmeter der Wohnung
     nebenkosten_groesse: float  # Quadratmeter der Wohnung, die für Nebenkosten relevant sind
-    Raeume: List[Raum]  # Liste von Raum-Objekten
+    raeume: List[Raum]  # Liste von Raum-Objekten
 
 @dataclass
 class Haus:

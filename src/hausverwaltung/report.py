@@ -3,21 +3,22 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
 from datetime import datetime
+from hausverwaltung.models import Nebenkostenabrechnung
 
-def create_pdf_nebenkosten_report(nebenkosten, filename="nebenkostenabrechnung.pdf"):
+def create_pdf_nebenkosten_report(nebenkosten: Nebenkostenabrechnung, filename="nebenkostenabrechnung.pdf"):
     doc = SimpleDocTemplate(filename, pagesize=A4)
     styles = getSampleStyleSheet()
     elements = []
 
     # Titel
-    title = Paragraph("<b>Nebenkostenabrechnung für das Jahr {}<b>".format(nebenkosten.jahr), styles["Title"])
+    title = Paragraph("<b>Nebenkostenabrechnung für das Jahr {}</b>".format(nebenkosten.jahr), styles["Title"])
     elements.append(title)
     elements.append(Spacer(1, 12))
 
     # Mieter-Informationen
     mieter_info = (
-        f"<b>Mieter:</b> {nebenkosten.mieter.vorname} {nebenkosten.mieter.nachname}<br/>"
-        f"<b>Adresse:</b> {nebenkosten.wohnung.lage_im_haus}, {nebenkosten.haus.strasse}, {nebenkosten.haus.plz} {nebenkosten.haus.stadt}"
+         f"<b>Mieter:</b> {nebenkosten.mieter.vorname} {nebenkosten.mieter.nachname}<br/>"
+         f"<b>Adresse:</b> {nebenkosten.wohnung.lage_im_haus}, {nebenkosten.haus.strasse}, {nebenkosten.haus.plz} {nebenkosten.haus.stadt}"
     )
     elements.append(Paragraph(mieter_info, styles["Normal"]))
     elements.append(Spacer(1, 12))
@@ -29,12 +30,18 @@ def create_pdf_nebenkosten_report(nebenkosten, filename="nebenkostenabrechnung.p
 
     # Tabelle mit Nebenkosten
     table_data = [["Kostenart", "Gesamtkosten Haus", "Umlageschlüssel", "Ihr Anteil"]]
+    total_kosten = 0
     for kosten in nebenkosten.kosten_details:
+        # Hier wird der Umlageschlüssel und Mieteranteil dynamisch berechnet
+        umlageschluessel = nebenkosten.wohnung.nebenkosten_groesse / nebenkosten.haus.nebenkosten_groesse
+        mieteranteil = umlageschluessel * kosten.betrag
+        total_kosten += kosten.betrag
+
         table_data.append([
-            kosten.kostenstelle,
-            f"{kosten.gesamtkosten:.2f} €",
-            f"{kosten.umlageschluessel:.2%}",
-            f"{kosten.mieteranteil:.2f} €"
+            kosten.kostenstelle.name,  # Name der Kostenstelle
+            f"{kosten.betrag:.2f} €",  # Gesamtkosten für die Kostenstelle
+            f"{umlageschluessel:.2%}",  # Umlageschlüssel (Wohnfläche des Mieters / Gesamtwohnfläche des Hauses)
+            f"{mieteranteil:.2f} €"  # Mieteranteil
         ])
     
     # Tabelle formatieren
@@ -49,7 +56,7 @@ def create_pdf_nebenkosten_report(nebenkosten, filename="nebenkostenabrechnung.p
     elements.append(Spacer(1, 12))
 
     # Gesamtkosten & Vorauszahlungen
-    gesamtkosten = f"<b>✅ Gesamtkostenanteil:</b> {nebenkosten.gesamtkosten:.2f} €"
+    gesamtkosten = f"<b>✅ Gesamtkostenanteil:</b> {total_kosten:.2f} €"
     vorauszahlungen = f"<b>✅ Ihre geleisteten Vorauszahlungen:</b> {nebenkosten.vorauszahlungen:.2f} €"
     elements.append(Paragraph(gesamtkosten, styles["Normal"]))
     elements.append(Paragraph(vorauszahlungen, styles["Normal"]))
@@ -74,14 +81,14 @@ def create_pdf_nebenkosten_report(nebenkosten, filename="nebenkostenabrechnung.p
     elements.append(Paragraph(zahlung_info, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
-    # Hinweise
-    hinweise = (
-        "<b>ℹ️ Wichtige Hinweise:</b><br/>"
-        "Der Umlageschlüssel berechnet sich aus dem Verhältnis Ihrer Wohnfläche zur Gesamtwohnfläche des Hauses.<br/>"
-        "Etwaige Einwände oder Rückfragen zur Abrechnung teilen Sie uns bitte innerhalb von 14 Tagen schriftlich mit.<br/>"
-        "Diese Abrechnung erfolgt gemäß §§ 556 ff. BGB."
-    )
-    elements.append(Paragraph(hinweise, styles["Normal"]))
+    # # Hinweise
+    # hinweise = (
+    #     "<b>ℹ️ Wichtige Hinweise:</b><br/>"
+    #     "Der Umlageschlüssel berechnet sich aus dem Verhältnis Ihrer Wohnfläche zur Gesamtwohnfläche des Hauses.<br/>"
+    #     "Etwaige Einwände oder Rückfragen zur Abrechnung teilen Sie uns bitte innerhalb von 14 Tagen schriftlich mit.<br/>"
+    #     "Diese Abrechnung erfolgt gemäß §§ 556 ff. BGB."
+    # )
+    # elements.append(Paragraph(hinweise, styles["Normal"]))
 
     # PDF erzeugen
     doc.build(elements)

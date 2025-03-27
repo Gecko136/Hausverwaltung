@@ -1,6 +1,8 @@
-from models import Nebenkostenabrechnung
-from mietvertrag_repository import MietvertragRepository
-from db import get_kostenstellen, get_kosten_pro_kostenstelle
+from datetime import date
+
+from hausverwaltung.models import Nebenkostenabrechnung, Mietvertrag, Mieter, Wohnung, Haus, Kostenstelle, Kosten, Raum
+from hausverwaltung.mietvertrag_repository import MietvertragRepository
+from hausverwaltung.db import get_kostenstellen, get_kosten_pro_kostenstelle
 
 def berechne_nebenkosten(mietvertrag_id, jahr, vorauszahlungen):
     """
@@ -61,6 +63,52 @@ def berechne_nebenkosten(mietvertrag_id, jahr, vorauszahlungen):
         anzahl_wochentage=miettage,  # Anzahl der Wochentage im Abrechnungsjahr
         vorauszahlungen=vorauszahlungen,  # Vorauszahlungen des Mieters
         nachzahlung=nachzahlung  # Berechnete Nachzahlung oder Rückerstattung
+    )
+    
+    return abrechnung
+
+def get_test_nebenkosten() -> Nebenkostenabrechnung:
+    # Beispielwerte für Mieter, Wohnung, Haus, etc.
+    mieter = Mieter(mieter_id=1, anrede='Herr', vorname='Max', nachname='Mustermann')
+
+    raeume = [ Raum(raum_id=1, typ_id=1, groesse=20, nebenkosten_groesse=20) ]
+ 
+    wohnung = Wohnung(wohnung_id=1, etage= "Parterre", lage_im_haus='1. OG', groesse=80, nebenkosten_groesse=80, raeume=raeume)
+    haus = Haus(haus_id=1, strasse='Musterstraße', hausnummer=1, plz = '22339', stadt="Hamburg", groesse=1000, nebenkosten_groesse=1000, wohnungen= [wohnung])
+    
+    # Beispielhafte Kostenstellen und Kosten
+    kostenstelle = Kostenstelle(kostenstelle_id=1, name='Heizung')
+    kosten_details = [
+        Kosten(kosten_id = 1, kostenstelle= kostenstelle, betrag=120),
+        Kosten(kosten_id = 2, kostenstelle= kostenstelle, betrag=80),
+        Kosten(kosten_id = 3, kostenstelle= kostenstelle, betrag=100),
+    ]
+    
+    # Gesamtkosten berechnen
+    gesamtkosten = sum(kosten.betrag for kosten in kosten_details)
+    
+    # Beispiel-Mietvertrag
+    mietvertrag = Mietvertrag(
+        mietvertrag_id=1,
+        mieter=mieter,
+        wohnung=wohnung,
+        haus=haus,
+        startdatum=date(2024, 1, 1),
+        enddatum=date(2024, 12, 31)
+    )
+    
+    # Nebenkostenabrechnung erstellen
+    abrechnung = Nebenkostenabrechnung(
+        jahr=2023,
+        mietvertrag=mietvertrag,
+        mieter=mieter,
+        wohnung=wohnung,
+        haus=haus,
+        kosten_details=kosten_details,
+        gesamtkosten=gesamtkosten,
+        anzahl_wochentage=365,
+        vorauszahlungen=300,  # Beispielhafte Vorauszahlungen
+        nachzahlung=gesamtkosten - 300  # Differenz zwischen Gesamtkosten und Vorauszahlungen
     )
     
     return abrechnung

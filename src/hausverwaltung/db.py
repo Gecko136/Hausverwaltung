@@ -240,8 +240,7 @@ def add_mieter_to_db(vorname, nachname):
     try:
         # Ausführen des SQL-Statements mit den übergebenen Parametern
         cursor.execute(sql, (vorname, nachname))
-        
-       
+              
         # Änderungen speichern (commit)
         result=cursor.fetchone()
         mieter_id = result.MieterID  # Holt sich die ID der eingefügten Zeile
@@ -256,3 +255,29 @@ def add_mieter_to_db(vorname, nachname):
         # Cursor und Verbindung schließen
         cursor.close()
         connection.close()
+
+def get_kostenstellen():
+    """
+    Gibt eine Liste aller Kostenstellen zurück.
+    """
+    connection = get_connection()
+    if connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT KostenstelleID, Name FROM Kostenstelle")
+        result = cursor.fetchall()
+        connection.close()
+        return result
+    return []  
+
+def get_kosten_pro_kostenstelle(kostenstelle_id):
+    """
+    Gibt die Kosten für eine bestimmte Kostenstelle zurück.
+    """
+    connection = get_connection()
+    if connection:
+        cursor = connection.cursor()
+        cursor.execute("SELECT Betrag FROM Kosten WHERE KostenstelleID = ?", (kostenstelle_id,))
+        result = cursor.fetchone()
+        connection.close()
+        return result
+    return None    
