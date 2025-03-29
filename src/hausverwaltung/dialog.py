@@ -1,55 +1,63 @@
-from hausverwaltung.db import get_wohnungen_pro_haus, get_haeuser, get_raeume, get_raeume_per_wohnung
+from hausverwaltung.db import get_wohnungen_pro_haus, get_haeuser, get_raeume, get_raeume_per_wohnung, get_alle_mieter, get_wohnungen 
+
 from hausverwaltung.config import load_config
 
-def show_haus_options():
+def list_haus():
     """
-    Zeigt dem Benutzer eine Liste von Häusern an, die aus der Datenbank abgerufen wurden.
-    Der Benutzer wird gebeten, ein Haus auszuwählen.
+    Listet alle Häuser aus der Datenbank auf.
     """
-    haeuser = get_haeuser()
+    return list_auswahl(get_haeuser, print_haus, "Haus")
 
-    if not haeuser:
-        print("Es sind keine Häuser in der Datenbank vorhanden.")
-        return None
-
-    print("Bitte wählen Sie ein Haus aus:")
-    for idx, haus in enumerate(haeuser, start=1):
-        print(f"{idx}. {haus[1]} {haus[2]} ({haus[3]} {haus[4]})")  # Strasse Hausnummer PLZ Stadt
-
-    while True:
-        try:
-            haus_choice = int(input("Bitte Hausnummer eingeben: "))
-            if 1 <= haus_choice <= len(haeuser):
-                return haeuser[haus_choice - 1][0]  # HausID
-            else:
-                print("Ungültige Auswahl. Bitte versuchen Sie es erneut.")
-        except ValueError:
-            print("Bitte eine gültige Zahl eingeben.")
-
-def show_wohnung_options(haus_id):
+def list_wohnung(haus_id=None):
     """
-    Zeigt dem Benutzer eine Liste von Wohnungen an, die zum gewählten Haus gehören.
-    Der Benutzer wird gebeten, eine Wohnung auszuwählen.
+    Listet alle Wohnungen auf. Falls eine Haus-ID angegeben wird, 
+    werden nur die Wohnungen dieses Hauses aufgelistet.
+
+    :param haus_id: Optionale ID eines Hauses, um die Wohnungen dieses Hauses zu filtern.
     """
-    wohnungen = get_wohnungen_pro_haus(haus_id)
+    # Wenn eine haus_id angegeben wird, nutzen wir get_wohnungen_pro_haus(haus_id)
+    if haus_id:
+        get_methode = lambda: get_wohnungen_pro_haus(haus_id)
+    else:
+        get_methode = get_wohnungen  # Wenn keine haus_id, dann alle Wohnungen
 
-    if not wohnungen:
-        print(f"Es sind keine Wohnungen für Haus {haus_id} vorhanden.")
-        return None
+    return list_auswahl(get_methode, print_wohnung, "Wohnung")
 
-    print(f"Bitte wählen Sie eine Wohnung aus (HausID: {haus_id}):")
-    for idx, wohnung in enumerate(wohnungen, start=1):
-        print(f"{idx}. Etage: {wohnung[1]}, Lage: {wohnung[2]}")  # Etage, Lage
 
-    while True:
-        try:
-            wohnung_choice = int(input("Bitte Wohnung Nummer eingeben: "))
-            if 1 <= wohnung_choice <= len(wohnungen):
-                return wohnungen[wohnung_choice - 1][0]  # EinheitID der Wohnung
-            else:
-                print("Ungültige Auswahl. Bitte versuchen Sie es erneut.")
-        except ValueError:
-            print("Bitte eine gültige Zahl eingeben.")
+
+def list_alle_mieter():
+    """
+    Listet alle Mieter aus der Datenbank auf.
+    """
+    return list_auswahl(get_alle_mieter, print_mieter, "Mieter")
+
+ 
+def get_mieter_auswahl():
+    """
+    Lässt den Benutzer einen Mieter aus der Datenbank auswählen.
+    
+    :return: Der ausgewählte Mieter oder None, falls keine Auswahl getroffen wurde.
+    """
+    return get_auswahl(get_alle_mieter, print_mieter, "Mieter")
+    
+def get_haus_option():
+    """
+    Lässt den Benutzer ein Haus aus der Datenbank auswählen.
+    
+    :return: Das ausgewählte Haus oder None, falls keine Auswahl getroffen wurde.
+    """
+    return get_auswahl(get_haeuser, print_haus, "Haus")
+
+def get_wohnung_option(haus_id):
+    """
+    Lässt den Benutzer eine Wohnung aus einem bestimmten Haus auswählen.
+    
+    :param haus_id: ID des Hauses, dessen Wohnungen angezeigt werden sollen.
+    :return: Die ausgewählte Wohnung oder None, falls keine Auswahl getroffen wurde.
+    """
+
+    return get_auswahl(lambda: get_wohnungen_pro_haus(haus_id), print_wohnung, "Wohnung")
+
 
 def show_raum_details():
     """
@@ -78,13 +86,13 @@ def create_raum_dialog():
     print("Erstellen eines neuen Raumes:\n")
     
     # 1. Haus auswählen
-    haus_id = show_haus_options()
-    if not haus_id:
+    haus = get_haus_option()
+    if not haus:
         print("Fehler: Kein Haus ausgewählt. Abbruch.")
         return
     
     # 2. Wohnung im ausgewählten Haus auswählen
-    wohnung_id = show_wohnung_options(haus_id)
+    wohnung_id = get_wohnung_option(haus.haus_id)
     if not wohnung_id:
         print("Fehler: Keine Wohnung ausgewählt. Abbruch.")
         return
@@ -121,6 +129,88 @@ def main():
             break
         else:
             print("Ungültige Auswahl. Bitte versuchen Sie es erneut.")
+
+
+def print_mieter(mieter):
+    """
+    Gibt die Daten eines einzelnen Mieters formatiert aus.
+    """
+    print(f"{mieter[1]} {mieter[2]} {mieter[3]}") 
+
+def print_wohnung(wohnung):
+    """
+    Gibt die Daten einer einzelnen Wohnung formatiert aus.
+    """
+    print(f"WohnungID: {wohnung[0]}, Etage: {wohnung[1]}, Lage: {wohnung[2]}")  # EinheitID, Etage, Lage
+
+def print_raum(raum):
+    """
+    Gibt die Daten eines einzelnen Raums formatiert aus.
+    """
+    print(f"RaumID: {raum[0]}, WohnungID: {raum[1]}, TypID: {raum[2]}, Größe: {raum[3]} m², Anteil Nebenkosten: {raum[4]}%")  # RaumID, WohnungID, TypID, Groesse, AnteilNebenkosten
+
+def print_haus(haus):
+    """
+    Gibt die Daten eines einzelnen Hauses formatiert aus.
+    """
+    print(f"HausID: {haus[0]}, Straße: {haus[1]}, Hausnummer: {haus[2]}, PLZ: {haus[3]}, Stadt: {haus[4]}")  # HausID, Strasse, Hausnummer, PLZ, Stadt
+
+def print_mietvertrag(mietvertrag):
+    """
+    Gibt die Daten eines einzelnen Mietvertrags formatiert aus.
+    """
+    print(f"MietvertragID: {mietvertrag[0]}, MieterID: {mietvertrag[1]}, WohnungID: {mietvertrag[2]}, Mietbeginn: {mietvertrag[3]}, Mietende: {mietvertrag[4]}")  # MietvertragID, MieterID, WohnungID, Mietbeginn, Mietende    
+
+
+
+def list_auswahl(get_methode, print_methode, objekt_typ="Eintrag"):
+    """
+    Listet die Einträge aus der get_methode auf.
+    
+    :param get_methode: Funktion, die die Liste der Einträge liefert.
+    :param print_methode: Funktion, die einen einzelnen Eintrag ausgibt.
+    :param objekt_typ: Name des Objekttyps für die Benutzerausgabe.
+    """
+    eintraege = get_methode()
+
+    if not eintraege:
+        print(f"Es sind keine {objekt_typ}e in der Datenbank vorhanden.")
+        return
+
+    print(f"Verfügbare {objekt_typ}e:")
+    for idx, eintrag in enumerate(eintraege, start=1):
+        print(f"{idx}.", end=" ")
+        print_methode(eintrag)
+
+
+def get_auswahl(get_methode, print_methode, objekt_typ="Eintrag"):
+    """
+    Fragt den Benutzer nach einer Auswahl aus einer Liste von Einträgen.
+    
+    :param get_methode: Funktion, die die Liste der Einträge liefert.
+    :param print_methode: Funktion, die einen einzelnen Eintrag ausgibt.
+    :param objekt_typ: Name des Objekttyps für die Benutzerausgabe.
+    :return: Der ausgewählte Datensatz oder None, falls keine Auswahl getroffen wurde.
+    """
+    eintraege = get_methode()
+
+    if not eintraege:
+        print(f"Es sind keine {objekt_typ}e in der Datenbank vorhanden.")
+        return None
+
+    list_auswahl(get_methode, print_methode, objekt_typ)
+
+    while True:
+        try:
+            auswahl = int(input(f"Bitte {objekt_typ}-Nummer eingeben: "))
+            if 1 <= auswahl <= len(eintraege):
+                return eintraege[auswahl - 1]
+            else:
+                print("Ungültige Auswahl. Bitte versuchen Sie es erneut.")
+        except ValueError:
+            print("Bitte eine gültige Zahl eingeben.")
+
+
 
 if __name__ == "__main__":
     main()

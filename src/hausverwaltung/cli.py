@@ -3,6 +3,8 @@ from hausverwaltung.config import set_gnucash_path, set_db_path, get_gnucash_pat
 from hausverwaltung.db import add_mieter_to_db
 from hausverwaltung.nebenkosten import berechne_nebenkosten, get_test_nebenkosten
 from hausverwaltung.report import create_pdf_nebenkosten_report
+from hausverwaltung.dialog import list_haus, list_alle_mieter, list_wohnung
+
 
 
 @click.group()
@@ -60,15 +62,34 @@ def report_haus(id, all, pdf, txt):
     pass
 
 
-@click.command()
-@click.option('--haus', is_flag=True, help='Listet alle Häuser auf.')
-@click.option('--mieter', is_flag=True, help='Listet alle Mieter auf.')
-def list(haus, mieter):
-    """Listet Häuser oder Mieter auf."""
-    if haus:
-        click.echo("Liste aller Häuser...")
-    if mieter:
-        click.echo("Liste aller Mieter...")
+# Add Commands
+@cli.group()
+def list():
+    """Listet verschiedene Datensätze auf."""
+    pass
+
+@list.command('haus')
+def l_haus():
+    """Listet alle Häuser auf."""
+    click.echo("Liste aller Häuser...")
+    list_haus()
+
+@list.command('mieter')
+def l_mieter():
+    """Listet alle Mieter auf."""
+    click.echo("Liste aller Mieter...")
+    # Hier müsste eine Funktion zum Auflisten der Mieter aufgerufen werden
+    list_alle_mieter()
+
+@list.command('wohnung')
+@click.option('--haus_id', type=int, help='ID des Hauses')
+def l_wohnung(haus_id):
+    """Listet alle Wohnungen auf."""
+    click.echo("Liste aller Wohnungen...")
+    # Hier müsste eine Funktion zum Auflisten der Wohnungen aufgerufen werden
+    list_wohnung(haus_id)
+
+
 
 @click.command()
 @click.option('--set', is_flag=True, help='Setzt neue Konfigurationseinstellungen.')
@@ -99,15 +120,8 @@ def add():
 @click.option('--nachname', default='', prompt='Nachname', help='Nachname des Mieters')
 def add_mieter(vorname, nachname):
     """Füge einen neuen Mieter hinzu"""
-    
-    # Standardwert setzen, falls nichts eingegeben wurde
-    if not vorname:
-        vorname = "Nicht angegeben"
-    if not nachname:
-        nachname = "Nicht angegeben"
-    
     click.echo(f"Neuer Mieter: {vorname} {nachname}")
-    
+
     # Den Mieter in die Datenbank speichern
     add_mieter_to_db(vorname, nachname)
 

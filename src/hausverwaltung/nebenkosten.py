@@ -107,8 +107,8 @@ def get_test_nebenkosten() -> Nebenkostenabrechnung:
         kosten_details=kosten_details,
         gesamtkosten=gesamtkosten,
         anzahl_wochentage=365,
-        vorauszahlungen=300,  # Beispielhafte Vorauszahlungen
-        nachzahlung=gesamtkosten - 300  # Differenz zwischen Gesamtkosten und Vorauszahlungen
+        vorauszahlungen=420,  # Beispielhafte Vorauszahlungen
+        nachzahlung=gesamtkosten - 420  # Differenz zwischen Gesamtkosten und Vorauszahlungen
     )
     
     return abrechnung

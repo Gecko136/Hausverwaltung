@@ -47,7 +47,7 @@ def get_wohnungen():
     connection = get_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT EinheitID, HausID, Etage, LageImHaus FROM Wohnung")
+        cursor.execute("SELECT WohnungID, HausID, Etage, LageImHaus FROM Wohnung")
         result = cursor.fetchall()
         connection.close()
         return result
@@ -60,7 +60,7 @@ def get_wohnungen_pro_haus(haus_id):
     connection = get_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT EinheitID, Etage, LageImHaus FROM Wohnung WHERE HausID = ?", (haus_id,))
+        cursor.execute("SELECT WohnungID, Etage, LageImHaus FROM Wohnung WHERE HausID = ?", (haus_id,))
         result = cursor.fetchall()
         connection.close()
         return result
@@ -86,7 +86,7 @@ def get_alle_mieter():
     connection = get_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT MieterID, Anrede, Vorname, Name, Geschlecht, KontaktInfo FROM Mieter")
+        cursor.execute("SELECT MieterID, Anrede, Vorname, Nachname, Geschlecht, KontaktInfo FROM Mieter")
         result = cursor.fetchall()
         connection.close()
         return result
