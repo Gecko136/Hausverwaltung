@@ -23,3 +23,6 @@ build/
 data/
 private/
 src/hausverwaltung.egg-info/ 
+
+*.pdf
+
