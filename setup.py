@@ -18,7 +18,8 @@ setup(
         "python-dotenv",
         "reportlab",
         "django",
-        "djangorestframework"
+        "djangorestframework",
+        "mssql-django >=1.0",
     ],
     entry_points={  # Definiert den Einstiegspunkt für das CLI
         "console_scripts": [

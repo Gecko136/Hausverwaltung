@@ -1,10 +1,12 @@
-import click
-from hausverwaltung.config import set_gnucash_path, set_db_path, get_gnucash_path, get_db_path, set_config
-from hausverwaltung.db import add_mieter_to_db
-from hausverwaltung.nebenkosten import berechne_nebenkosten, get_test_nebenkosten
-from hausverwaltung.report import create_pdf_nebenkosten_report
-from hausverwaltung.dialog import list_haus, list_alle_mieter, list_wohnung
+import os
+import django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "hausverwaltung.settings")
+django.setup()
+
+import click
+from django.db import IntegrityError
+from hausverwaltung.models import Mieter, Haus, Wohnung, Raum, Mietvertrag, Komplex, Kostenstelle, Kostensplit, Komplexteile, Forderung
 
 
 @click.group()
@@ -12,132 +14,107 @@ def cli():
     """Hausverwaltung CLI"""
     pass
 
-@click.command()
-@click.option('--file', type=click.Path(exists=True), help='Pfad zur GnuCash-Datei.')
-def import_gnucash(file):
-    """Importiert GnuCash-Daten."""
-    click.echo(f"Importiere GnuCash-Daten aus {file if file else 'der Standarddatei'}...")
-
-
-@cli.group()
-def report():
-    """Generate different reports."""
-    pass
-
-@report.group()
-def nebenkosten():
-    """Generate Nebenkosten reports."""
-    pass
-
-@nebenkosten.command('mietvertrag')
-@click.option('--id', type=int, help='ID des Mietvertrags', required=True)
-@click.option('--jahr', type=int, required=True, help='Abrechnungsjahr', prompt='Abrechnungsjahr')
-@click.option('--all', is_flag=True, help='Bericht für alle Mieter')
-@click.option('--pdf', is_flag=True, help='Bericht im PDF-Format')
-@click.option('--txt', is_flag=True, help='Bericht als Textausgabe')
-def nebenkosten_mietvertrag(id, jahr, all, pdf, txt):
-    """Erstellt eine Nebenkostenabrechnung für einen Mietvertrag."""
-    # Vorauszahlungen müssen noch aus der DB geholt werden
-    vorauszahlungen = 0  # TODO: Hier echte Werte holen
-
-    # nebenkosten = berechne_nebenkosten(id, jahr, vorauszahlungen)
-    nebenkosten = get_test_nebenkosten()
-
-    if pdf:
-        filename = f"nebenkosten_mietvertrag_{id}_{jahr}.pdf"
-        create_pdf_nebenkosten_report(nebenkosten, filename)
-        click.echo(f"PDF gespeichert als {filename}")
-    elif txt:
-        click.echo("Noch nicht implementiert: Textausgabe.")
-    else:
-        click.echo("Bitte --pdf oder --txt angeben.")
-
-@nebenkosten.command('haus')
-@click.option('--id', type=int, help='ID des Hauses')
-@click.option('--all', is_flag=True, help='Bericht für alle Häuser')
-@click.option('--pdf', is_flag=True, help='Bericht im PDF-Format')
-@click.option('--txt', is_flag=True, help='Bericht als Textausgabe')
-def report_haus(id, all, pdf, txt):
-    """Generate Nebenkosten report for a specific house or all houses."""
-    pass
-
-
-# Add Commands
-@cli.group()
-def list():
-    """Listet verschiedene Datensätze auf."""
-    pass
-
-@list.command('haus')
-def l_haus():
-    """Listet alle Häuser auf."""
-    click.echo("Liste aller Häuser...")
-    list_haus()
-
-@list.command('mieter')
-def l_mieter():
-    """Listet alle Mieter auf."""
-    click.echo("Liste aller Mieter...")
-    # Hier müsste eine Funktion zum Auflisten der Mieter aufgerufen werden
-    list_alle_mieter()
-
-@list.command('wohnung')
-@click.option('--haus_id', type=int, help='ID des Hauses')
-def l_wohnung(haus_id):
-    """Listet alle Wohnungen auf."""
-    click.echo("Liste aller Wohnungen...")
-    # Hier müsste eine Funktion zum Auflisten der Wohnungen aufgerufen werden
-    list_wohnung(haus_id)
-
-
-
-@click.command()
-@click.option('--set', is_flag=True, help='Setzt neue Konfigurationseinstellungen.')
-@click.option('--db', type=click.Path(), help='Pfad zur Datenbankdatei.')
-@click.option('--gnucash', type=click.Path(), help='Pfad zur GnuCash-Datei.')
-@click.option('--get', is_flag=True, help='Zeigt aktuelle Konfigurationseinstellungen.')
-def config(set, db, gnucash, get):
-    """Verwaltet Konfigurationseinstellungen."""
-
-    if set:
-        if db:
-            set_db_path(db)
-        if gnucash:
-            set_gnucash_path(gnucash)       
-
-    if get:
-        click.echo(f"GnuCash-Pfad: {get_gnucash_path()}")
-        click.echo(f"DB-Pfad: {get_db_path()}")
 
 # Add Commands
 @cli.group()
 def add():
-    """Addiere neue Datensätze"""
+    """Füge neue Datensätze hinzu"""
     pass
 
-@add.command('mieter')
-@click.option('--vorname', default='', prompt='Vorname', help='Vorname des Mieters')
-@click.option('--nachname', default='', prompt='Nachname', help='Nachname des Mieters')
-def add_mieter(vorname, nachname):
-    """Füge einen neuen Mieter hinzu"""
-    click.echo(f"Neuer Mieter: {vorname} {nachname}")
 
-    # Den Mieter in die Datenbank speichern
-    add_mieter_to_db(vorname, nachname)
+@add.command('mieter')
+@click.option('--vorname', prompt='Vorname', help='Vorname des Mieters')
+@click.option('--nachname', prompt='Nachname', help='Nachname des Mieters')
+@click.option('--kontakt_info', prompt='Kontaktinfo', help='Kontaktinformationen des Mieters')
+def add_mieter(vorname, nachname, kontakt_info):
+    """Fügt einen neuen Mieter hinzu"""
+    try:
+        mieter = Mieter.objects.create(vorname=vorname, nachname=nachname, kontakt_info=kontakt_info)
+        click.echo(f"Mieter {mieter.vorname} {mieter.nachname} erfolgreich hinzugefügt.")
+    except IntegrityError:
+        click.echo(f"Fehler beim Hinzufügen des Mieters {vorname} {nachname}.")
+
+
+@add.command('haus')
+@click.option('--strasse', prompt='Straße', help='Straße des Hauses')
+@click.option('--hausnummer', prompt='Hausnummer', help='Hausnummer des Hauses')
+@click.option('--plz', prompt='Postleitzahl', help='Postleitzahl des Hauses')
+@click.option('--stadt', prompt='Stadt', help='Stadt des Hauses')
+def add_haus(strasse, hausnummer, plz, stadt):
+    """Fügt ein neues Haus hinzu"""
+    haus = Haus.objects.create(strasse=strasse, hausnummer=hausnummer, plz=plz, stadt=stadt)
+    click.echo(f"Haus {haus.strasse} {haus.hausnummer} in {haus.stadt} erfolgreich hinzugefügt.")
+
 
 @add.command('wohnung')
-@click.argument('adresse')
-@click.argument('zimmeranzahl')
-def add_wohnung(adresse, zimmeranzahl):
-    """Füge eine neue Wohnung hinzu"""
-    click.echo(f"Neue Wohnung {adresse} mit {zimmeranzahl} Zimmern wurde hinzugefügt.")
+@click.option('--haus_id', type=int, prompt='Haus ID', help='ID des Hauses')
+@click.option('--etage', prompt='Etage', help='Etage der Wohnung')
+@click.option('--lage_im_haus', prompt='Lage im Haus', help='Lage der Wohnung im Haus')
+@click.option('--groesse', prompt='Größe der Wohnung', type=float, help='Größe der Wohnung')
+def add_wohnung(haus_id, etage, lage_im_haus, groesse):
+    """Fügt eine neue Wohnung hinzu"""
+    haus = Haus.objects.get(id=haus_id)
+    wohnung = Wohnung.objects.create(haus=haus, etage=etage, lage_im_haus=lage_im_haus, groesse=groesse)
+    click.echo(f"Wohnung {wohnung.etage} in Haus {wohnung.haus} erfolgreich hinzugefügt.")
 
-@add.command('raum')
-@click.argument('name')
-@click.argument('typ')
-def add_raum(name, typ):
-    """Füge einen neuen Raum hinzu"""
-    click.echo(f"Neuer Raum {name} vom Typ {typ} wurde hinzugefügt.")
+
+@add.command('mietvertrag')
+@click.option('--mieter_id', type=int, prompt='Mieter ID', help='ID des Mieters')
+@click.option('--wohnung_id', type=int, prompt='Wohnung ID', help='ID der Wohnung')
+@click.option('--startdatum', prompt='Startdatum (YYYY-MM-DD)', help='Startdatum des Mietvertrags')
+@click.option('--enddatum', prompt='Enddatum (YYYY-MM-DD)', help='Enddatum des Mietvertrags')
+@click.option('--mietpreis', type=float, prompt='Mietpreis', help='Monatlicher Mietpreis')
+def add_mietvertrag(mieter_id, wohnung_id, startdatum, enddatum, mietpreis):
+    """Fügt einen neuen Mietvertrag hinzu"""
+    mieter = Mieter.objects.get(id=mieter_id)
+    wohnung = Wohnung.objects.get(id=wohnung_id)
+    mietvertrag = Mietvertrag.objects.create(
+        mieter=mieter,
+        wohnung=wohnung,
+        startdatum=startdatum,
+        enddatum=enddatum,
+        mietpreis=mietpreis
+    )
+    click.echo(f"Mietvertrag für Mieter {mieter.vorname} {mieter.nachname} in Wohnung {wohnung.etage} erfolgreich hinzugefügt.")
+
+
+@add.command('komplex')
+@click.option('--name', prompt='Name des Komplexes', help='Name des Komplexes')
+@click.option('--beschreibung', prompt='Beschreibung', help='Beschreibung des Komplexes')
+def add_komplex(name, beschreibung):
+    """Fügt einen neuen Komplex hinzu"""
+    komplex = Komplex.objects.create(name=name, beschreibung=beschreibung)
+    click.echo(f"Komplex {komplex.name} erfolgreich hinzugefügt.")
+
+
+@add.command('kostenstelle')
+@click.option('--name', prompt='Name der Kostenstelle', help='Name der Kostenstelle')
+@click.option('--beschreibung', prompt='Beschreibung', help='Beschreibung der Kostenstelle')
+def add_kostenstelle(name, beschreibung):
+    """Fügt eine neue Kostenstelle hinzu"""
+    kostenstelle = Kostenstelle.objects.create(name=name, beschreibung=beschreibung)
+    click.echo(f"Kostenstelle {kostenstelle.name} erfolgreich hinzugefügt.")
+
+
+@add.command('kostensplit')
+@click.option('--kostenstelle_id', type=int, prompt='Kostenstelle ID', help='ID der Kostenstelle')
+@click.option('--anteil', type=float, prompt='Kostenanteil', help='Anteil der Kosten')
+def add_kostensplit(kostenstelle_id, anteil):
+    """Fügt einen neuen Kostensplit hinzu"""
+    kostenstelle = Kostenstelle.objects.get(id=kostenstelle_id)
+    kostensplit = Kostensplit.objects.create(kostenstelle=kostenstelle, anteil=anteil)
+    click.echo(f"Kostensplit für Kostenstelle {kostenstelle.name} erfolgreich hinzugefügt.")
+
+
+@add.command('komplexteile')
+@click.option('--komplex_id', type=int, prompt='Komplex ID', help='ID des Komplexes')
+@click.option('--beschreibung', prompt='Beschreibung des Teils', help='Beschreibung des Teils')
+def add_komplexteile(komplex_id, beschreibung):
+    """Fügt ein neues Teil eines Komplexes hinzu"""
+    komplex = Komplex.objects.get(id=komplex_id)
+    komplexteil = Komplexteile.objects.create(komplex=komplex, beschreibung=beschreibung)
+    click.echo(f"Teil des Komplexes {komplex.name} erfolgreich hinzugefügt.")
+
 
 # Edit Commands
 @cli.group()
@@ -145,29 +122,76 @@ def edit():
     """Bearbeite bestehende Datensätze"""
     pass
 
+
 @edit.command('mieter')
-@click.argument('mieter_id')
-@click.argument('name')
-@click.argument('email')
-def edit_mieter(mieter_id, name, email):
+@click.argument('mieter_id', type=int)
+@click.option('--vorname', help='Vorname des Mieters')
+@click.option('--nachname', help='Nachname des Mieters')
+@click.option('--kontakt_info', help='Kontaktinformationen des Mieters')
+def edit_mieter(mieter_id, vorname, nachname, kontakt_info):
     """Bearbeite einen bestehenden Mieter"""
-    click.echo(f"Mieter {mieter_id} wurde zu {name} mit der Email {email} bearbeitet.")
+    mieter = Mieter.objects.get(id=mieter_id)
+    if vorname:
+        mieter.vorname = vorname
+    if nachname:
+        mieter.nachname = nachname
+    if kontakt_info:
+        mieter.kontakt_info = kontakt_info
+    mieter.save()
+    click.echo(f"Mieter {mieter_id} wurde erfolgreich bearbeitet.")
 
-@edit.command('wohnung')
-@click.argument('wohnung_id')
-@click.argument('adresse')
-@click.argument('zimmeranzahl')
-def edit_wohnung(wohnung_id, adresse, zimmeranzahl):
-    """Bearbeite eine bestehende Wohnung"""
-    click.echo(f"Die Wohnung {wohnung_id} wurde zu {adresse} mit {zimmeranzahl} Zimmern bearbeitet.")
 
-@edit.command('raum')
-@click.argument('raum_id')
-@click.argument('name')
-@click.argument('typ')
-def edit_raum(raum_id, name, typ):
-    """Bearbeite einen bestehenden Raum"""
-    click.echo(f"Der Raum {raum_id} wurde zu {name} vom Typ {typ} bearbeitet.")
+@edit.command('mietvertrag')
+@click.argument('mietvertrag_id', type=int)
+@click.option('--startdatum', help='Startdatum des Mietvertrags')
+@click.option('--enddatum', help='Enddatum des Mietvertrags')
+@click.option('--mietpreis', type=float, help='Monatlicher Mietpreis')
+def edit_mietvertrag(mietvertrag_id, startdatum, enddatum, mietpreis):
+    """Bearbeite einen bestehenden Mietvertrag"""
+    mietvertrag = Mietvertrag.objects.get(id=mietvertrag_id)
+    if startdatum:
+        mietvertrag.startdatum = startdatum
+    if enddatum:
+        mietvertrag.enddatum = enddatum
+    if mietpreis:
+        mietvertrag.mietpreis = mietpreis
+    mietvertrag.save()
+    click.echo(f"Mietvertrag {mietvertrag_id} wurde erfolgreich bearbeitet.")
+
+
+# List Commands
+@cli.group()
+def list():
+    """Listet verschiedene Datensätze auf"""
+    pass
+
+
+@list.command('mieter')
+def list_mieter():
+    """Listet alle Mieter auf"""
+    mieter_list = Mieter.objects.all()
+    click.echo("Mieter-Liste:")
+    for mieter in mieter_list:
+        click.echo(f"{mieter.id}: {mieter.vorname} {mieter.nachname}")
+
+
+@list.command('mietvertrag')
+def list_mietvertrag():
+    """Listet alle Mietverträge auf"""
+    mietvertrag_list = Mietvertrag.objects.all()
+    click.echo("Mietvertrag-Liste:")
+    for mietvertrag in mietvertrag_list:
+        click.echo(f"{mietvertrag.id}: Mieter {mietvertrag.mieter.vorname} {mietvertrag.mieter.nachname}, Wohnung {mietvertrag.wohnung.etage}, Mietpreis {mietvertrag.mietpreis} EUR")
+
+
+@list.command('komplex')
+def list_komplex():
+    """Listet alle Komplexe auf"""
+    komplex_list = Komplex.objects.all()
+    click.echo("Komplex-Liste:")
+    for komplex in komplex_list:
+        click.echo(f"{komplex.id}: {komplex.name} - {komplex.beschreibung}")
+
 
 # Delete Commands
 @cli.group()
@@ -175,33 +199,30 @@ def delete():
     """Lösche bestehende Datensätze"""
     pass
 
+
 @delete.command('mieter')
-@click.argument('mieter_id')
+@click.argument('mieter_id', type=int)
 def delete_mieter(mieter_id):
     """Lösche einen Mieter"""
-    click.echo(f"Mieter {mieter_id} wurde gelöscht.")
+    try:
+        mieter = Mieter.objects.get(id=mieter_id)
+        mieter.delete()
+        click.echo(f"Mieter {mieter_id} wurde erfolgreich gelöscht.")
+    except Mieter.DoesNotExist:
+        click.echo(f"Mieter mit ID {mieter_id} wurde nicht gefunden.")
 
-@delete.command('wohnung')
-@click.argument('wohnung_id')
-def delete_wohnung(wohnung_id):
-    """Lösche eine Wohnung"""
-    click.echo(f"Die Wohnung {wohnung_id} wurde gelöscht.")
 
-@delete.command('raum')
-@click.argument('raum_id')
-def delete_raum(raum_id):
-    """Lösche einen Raum"""
-    click.echo(f"Der Raum {raum_id} wurde gelöscht.")
-# Weitere ähnliche Befehle für Wohnungen, Räume und Mietverhältnisse
+@delete.command('mietvertrag')
+@click.argument('mietvertrag_id', type=int)
+def delete_mietvertrag(mietvertrag_id):
+    """Lösche einen Mietvertrag"""
+    try:
+        mietvertrag = Mietvertrag.objects.get(id=mietvertrag_id)
+        mietvertrag.delete()
+        click.echo(f"Mietvertrag {mietvertrag_id} wurde erfolgreich gelöscht.")
+    except Mietvertrag.DoesNotExist:
+        click.echo(f"Mietvertrag mit ID {mietvertrag_id} wurde nicht gefunden.")
 
-# Registrierung der Befehle bei der CLI
-cli.add_command(import_gnucash)
-cli.add_command(report)
-cli.add_command(list)
-cli.add_command(config)
-cli.add_command(add_mieter)
-cli.add_command(delete_mieter)
-cli.add_command(edit_mieter)
 
 if __name__ == '__main__':
     cli()
