@@ -1,0 +1,11 @@
+CREATE TABLE [dbo].[Mieter](
+	[MieterID] [int] IDENTITY(1,1) NOT NULL,
+	[Anrede] [nvarchar](20) NULL,
+	[Nachname] [nvarchar](100) NULL,
+	[KontaktInfo] [nvarchar](100) NULL,
+	[Vorname] [nvarchar](100) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[MieterID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]

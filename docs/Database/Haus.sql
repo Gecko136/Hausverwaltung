@@ -1,0 +1,14 @@
+CREATE TABLE [dbo].[Haus](
+	[HausID] [int] IDENTITY(1,1) NOT NULL,
+	[Strasse] [nvarchar](100) NULL,
+	[Hausnummer] [nvarchar](10) NULL,
+	[PLZ] [nvarchar](10) NULL,
+	[Stadt] [nvarchar](100) NULL,
+PRIMARY KEY CLUSTERED 
+(
+	[HausID] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+
+
+

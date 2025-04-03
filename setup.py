@@ -17,6 +17,8 @@ setup(
         "pyodbc",
         "python-dotenv",
         "reportlab",
+        "django",
+        "djangorestframework"
     ],
     entry_points={  # Definiert den Einstiegspunkt für das CLI
         "console_scripts": [

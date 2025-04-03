@@ -173,7 +173,7 @@ def get_mieter(mieter_id):
     connection = get_connection()
     if connection:
         cursor = connection.cursor()
-        cursor.execute("SELECT Anrede, Vorname, Name, Geschlecht, KontaktInfo FROM Mieter WHERE MieterID = ?", (mieter_id,))
+        cursor.execute("SELECT Anrede, Vorname, Name, KontaktInfo FROM Mieter WHERE MieterID = ?", (mieter_id,))
         result = cursor.fetchone()
         connection.close()
         return result
