@@ -1,49 +1,79 @@
+from hausverwaltung.models import Mietvertrag, Forderung, Haus, Wohnung, Mieter
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle, Spacer
+from decimal import Decimal
 from datetime import datetime
-from hausverwaltung.models import Nebenkostenabrechnung
+import re
 
-def create_pdf_nebenkosten_report(nebenkosten: Nebenkostenabrechnung, filename="nebenkostenabrechnung.pdf"):
+def sanitize_filename(name):
+    return re.sub(r'[^a-zA-Z0-9]', '_', name)
+
+def create_report(mietvertrag_id, jahr):
+    # Prüfen, ob es Forderungen für den Mietvertrag in diesem Jahr gibt
+    try:
+        mietvertrag = Mietvertrag.objects.get(id=mietvertrag_id)
+    except Mietvertrag.DoesNotExist:
+        print(f"Mietvertrag mit ID {mietvertrag_id} existiert nicht.")
+        return
+
+    # Suche die Forderungen, die zu diesem Mietvertrag gehören und für das angegebene Jahr relevant sind
+    forderungen = Forderung.objects.filter(mietvertrag=mietvertrag, berechnungsdatum__year=jahr)
+
+    if not forderungen.exists():
+        print(f"Es gibt keine Forderungen für Mietvertrag {mietvertrag_id} im Jahr {jahr}.")
+        return
+
+    # Erstelle den Report
+    mieter = mietvertrag.mieter
+    haus = mietvertrag.wohnung.haus
+
+    # Erstelle den Dateinamen
+    filename = f"nebenkostenabrechnung_{jahr}_{mieter.id}_{mieter.vorname}_{mieter.nachname}"
+    filename = sanitize_filename(filename)+".pdf"
+
     doc = SimpleDocTemplate(filename, pagesize=A4)
     styles = getSampleStyleSheet()
     elements = []
 
     # Titel
-    title = Paragraph("<b>Nebenkostenabrechnung für das Jahr {}</b>".format(nebenkosten.jahr), styles["Title"])
+    title = Paragraph(f"<b>Nebenkostenabrechnung für das Jahr {jahr}</b>", styles["Title"])
     elements.append(title)
     elements.append(Spacer(1, 12))
 
     # Mieter-Informationen
     mieter_info = (
-         f"<b>Mieter:</b> {nebenkosten.mieter.vorname} {nebenkosten.mieter.nachname}<br/>"
-         f"<b>Adresse:</b> {nebenkosten.wohnung.lage_im_haus}, {nebenkosten.haus.strasse}, {nebenkosten.haus.plz} {nebenkosten.haus.stadt}"
+        f"<b>Mieter:</b> {mieter.vorname} {mieter.nachname}<br/>"
+        f"<b>Adresse:</b> {mieter.vorname} {mieter.nachname}<br/>"
+        f"3. Etage, {haus.strasse}, {haus.plz} {haus.stadt}"
     )
     elements.append(Paragraph(mieter_info, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Abrechnungszeitraum
-    abrechnungszeitraum = f"<b>Abrechnungszeitraum:</b> {nebenkosten.mietvertrag.startdatum.strftime('%d.%m.%Y')} - {nebenkosten.mietvertrag.enddatum.strftime('%d.%m.%Y')}"
+    abrechnungszeitraum = f"<b>Abrechnungszeitraum:</b> 01.01.{jahr} - 31.12.{jahr}"
     elements.append(Paragraph(abrechnungszeitraum, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Tabelle mit Nebenkosten
     table_data = [["Kostenart", "Gesamtkosten Haus", "Umlageschlüssel", "Ihr Anteil"]]
-    total_kosten = 0
-    for kosten in nebenkosten.kosten_details:
-        # Hier wird der Umlageschlüssel und Mieteranteil dynamisch berechnet
-        umlageschluessel = nebenkosten.wohnung.nebenkosten_groesse / nebenkosten.haus.nebenkosten_groesse
-        mieteranteil = umlageschluessel * kosten.betrag
-        total_kosten += kosten.betrag
+    total_kosten = Decimal(0)
 
-        table_data.append([
-            kosten.kostenstelle.name,  # Name der Kostenstelle
-            f"{kosten.betrag:.2f} €",  # Gesamtkosten für die Kostenstelle
-            f"{umlageschluessel:.2%}",  # Umlageschlüssel (Wohnfläche des Mieters / Gesamtwohnfläche des Hauses)
-            f"{mieteranteil:.2f} €"  # Mieteranteil
+    for forderung in forderungen:
+        # Berechnung des Umlageschlüssels
+        umlageschluessel = Decimal(mietvertrag.wohnung.nebenkosten_groesse) / Decimal(haus.nebenkosten_groesse)
+        mieteranteil = umlageschluessel * Decimal(forderung.gesamtbetrag)
+        total_kosten += Decimal(mieteranteil)
+
+        # Kosten in die Tabelle einfügen
+        table_data.append([ 
+            f"{forderung.bezeichnung} ({forderung.split_anteil}%)",  # Kostenart mit Split-Anteil
+            f"{Decimal(forderung.gesamtbetrag):.2f} €",  # Gesamtkosten als Decimal formatiert
+            f"{umlageschluessel:.2%}",  # Umlageschlüssel als Prozent
+            f"{mieteranteil:.2f} €"  # Mieteranteil als Decimal formatiert
         ])
-    
+
     # Tabelle formatieren
     table = Table(table_data, colWidths=[150, 100, 100, 100])
     table.setStyle(TableStyle([
@@ -56,39 +86,63 @@ def create_pdf_nebenkosten_report(nebenkosten: Nebenkostenabrechnung, filename="
     elements.append(Spacer(1, 12))
 
     # Gesamtkosten & Vorauszahlungen
+    vorauszahlungen = Decimal(200.00)  # Temporärer Wert für Vorauszahlungen als Decimal
     gesamtkosten = f"<b>✅ Gesamtkostenanteil:</b> {total_kosten:.2f} €"
-    vorauszahlungen = f"<b>✅ Ihre geleisteten Vorauszahlungen:</b> {nebenkosten.vorauszahlungen:.2f} €"
     elements.append(Paragraph(gesamtkosten, styles["Normal"]))
-    elements.append(Paragraph(vorauszahlungen, styles["Normal"]))
+
+    vorauszahlungen_text = f"<b>✅ Ihre geleisteten Vorauszahlungen:</b> {vorauszahlungen:.2f} €"
+    elements.append(Paragraph(vorauszahlungen_text, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Nachzahlung oder Guthaben
-    if nebenkosten.nachzahlung > 0:
-        nachzahlung = f"<b>🔴 Nachzahlung zu Ihren Lasten:</b> {nebenkosten.nachzahlung:.2f} €"
+    nachzahlung = total_kosten - vorauszahlungen
+    if nachzahlung > 0:
+        nachzahlung_text = f"<b>🔴 Nachzahlung zu Ihren Lasten:</b> {nachzahlung:.2f} €"
     else:
-        nachzahlung = f"<b>🟢 Ihr Guthaben:</b> {abs(nebenkosten.nachzahlung):.2f} € (wird Ihnen erstattet)"
-    elements.append(Paragraph(nachzahlung, styles["Normal"]))
+        nachzahlung_text = f"<b>🟢 Ihr Guthaben:</b> {abs(nachzahlung):.2f} € (wird Ihnen erstattet)"
+    elements.append(Paragraph(nachzahlung_text, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Zahlungsinformationen
     zahlung_info = (
         "<b>📌 Zahlungsinformation:</b><br/>"
-        "Bitte überweisen Sie den Nachzahlungsbetrag bis spätestens 30.04.{} auf folgendes Konto:<br/>"
+        "Bitte überweisen Sie den Nachzahlungsbetrag bis spätestens 30.04.{0} auf folgendes Konto:<br/>"
         "<b>IBAN:</b> DE12 3456 7890 1234 5678 90<br/>"
         "<b>BIC:</b> XYZBANK123<br/>"
-        "<b>Verwendungszweck:</b> Nebenkosten {} – {} {}"
-    ).format(nebenkosten.jahr + 1, nebenkosten.jahr, nebenkosten.mieter.vorname, nebenkosten.mieter.nachname)
+        "<b>Verwendungszweck:</b> Nebenkosten {0} – {1} {2}"
+    ).format(jahr + 1, mietvertrag.mieter.vorname, mietvertrag.mieter.nachname)
     elements.append(Paragraph(zahlung_info, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
-    # # Hinweise
-    # hinweise = (
-    #     "<b>ℹ️ Wichtige Hinweise:</b><br/>"
-    #     "Der Umlageschlüssel berechnet sich aus dem Verhältnis Ihrer Wohnfläche zur Gesamtwohnfläche des Hauses.<br/>"
-    #     "Etwaige Einwände oder Rückfragen zur Abrechnung teilen Sie uns bitte innerhalb von 14 Tagen schriftlich mit.<br/>"
-    #     "Diese Abrechnung erfolgt gemäß §§ 556 ff. BGB."
-    # )
-    # elements.append(Paragraph(hinweise, styles["Normal"]))
+    # Fußnote
+    footnote = "<i>Bei Positionen mit einem Prozentsatz wird nur der anteilige Betrag berechnet.</i>"
+    elements.append(Paragraph(footnote, styles["Normal"]))
 
     # PDF erzeugen
     doc.build(elements)
+
+    print(f"Report für Mietvertrag {mietvertrag_id} im Jahr {jahr} wurde als {filename} gespeichert.")
+
+
+
+
+def create_reports_for_all_mietvertraege(jahr):
+    """Erstellt Nebenkostenabrechnungen für alle aktiven Mietverträge im angegebenen Jahr."""
+    mietvertraege = Mietvertrag.objects.filter(
+        mietbeginn__lte=datetime(jahr, 12, 31),
+        mietende__isnull=True  # Mietende ist NULL (noch aktiv)
+    ) | Mietvertrag.objects.filter(
+        mietbeginn__lte=datetime(jahr, 12, 31),
+        mietende__gte=datetime(jahr, 1, 1)  # Mietende ist nach dem 1.1. des Jahres
+    )
+
+    if not mietvertraege.exists():
+        print(f"⚠️ Keine aktiven Mietverträge im Jahr {jahr} gefunden.")
+        return
+
+    print(f"📄 Generiere Nebenkostenabrechnungen für {mietvertraege.count()} Mietverträge...")
+    
+    for mietvertrag in mietvertraege:
+        create_report(mietvertrag.id, jahr)
+
+    print(f"✅ Alle Nebenkostenabrechnungen für {jahr} wurden erstellt.")

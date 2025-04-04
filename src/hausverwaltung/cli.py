@@ -7,7 +7,7 @@ django.setup()
 import click
 from django.db import IntegrityError
 from hausverwaltung.models import Mieter, Haus, Wohnung, Raum, Mietvertrag, Komplex, Kostenstelle, Kostensplit, Komplexteile, Forderung
-
+from hausverwaltung.report import create_report, create_reports_for_all_mietvertraege
 
 @click.group()
 def cli():
@@ -223,6 +223,25 @@ def delete_mietvertrag(mietvertrag_id):
     except Mietvertrag.DoesNotExist:
         click.echo(f"Mietvertrag mit ID {mietvertrag_id} wurde nicht gefunden.")
 
+# Report Command
+@cli.group()
+def report():
+    """Erzeuge verschiedene Reports"""
+    pass
+
+@report.command("nebenkosten")
+@click.option("--jahr", type=int, required=True, help="Jahr der Nebenkostenabrechnung")
+@click.option("--id", "mietvertrag_id", type=int, help="Mietvertrags-ID für eine spezifische Abrechnung")
+@click.option("--all", "alle", is_flag=True, help="Erzeuge Abrechnungen für alle gültigen Mietverträge")
+def nebenkosten(jahr, mietvertrag_id, alle):
+    """Erstellt die Nebenkostenabrechnung für ein bestimmtes Jahr"""
+    
+    if alle:
+        create_reports_for_all_mietvertraege(jahr)
+    elif mietvertrag_id:
+        create_report(mietvertrag_id, jahr)
+    else:
+        click.echo("❌ Bitte entweder --id <Mietvertrags-ID> oder --all angeben.")
 
 if __name__ == '__main__':
     cli()
