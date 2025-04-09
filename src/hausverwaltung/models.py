@@ -106,10 +106,14 @@ class Forderung(models.Model):
     bezeichnung = models.CharField(max_length=200)
     gesamtbetrag = models.DecimalField(max_digits=8, decimal_places=2)
     split_anteil = models.IntegerField()
+    umlageschluesselQM = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    umlageschluesselMietdauer = models.DecimalField(max_digits=10, decimal_places=2, null=True)
+    umlageschluesselVerbrauch = models.DecimalField(max_digits=10, decimal_places=2, null=True)
     gesamtwohnflaeche = models.DecimalField(max_digits=10, decimal_places=2)
     anteilwohnflaeche = models.DecimalField(max_digits=10, decimal_places=2)
     anteilbetrag = models.DecimalField(max_digits=8, decimal_places=2)
-    miettage = models.IntegerField()
+    miettage = models.IntegerField(null=True)
+    tageimjahr = models.IntegerField(null=True)
 
     def __str__(self):
         return f"Forderung {self.id} - {self.bezeichnung}"

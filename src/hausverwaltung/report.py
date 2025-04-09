@@ -27,7 +27,8 @@ def create_report(mietvertrag_id, jahr):
 
     # Erstelle den Report
     mieter = mietvertrag.mieter
-    haus = mietvertrag.wohnung.haus
+    wohnung = mietvertrag.wohnung
+    haus = wohnung.haus
 
     # Erstelle den Dateinamen
     filename = f"nebenkostenabrechnung_{jahr}_{mieter.id}_{mieter.vorname}_{mieter.nachname}"
@@ -46,36 +47,42 @@ def create_report(mietvertrag_id, jahr):
     mieter_info = (
         f"<b>Mieter:</b> {mieter.vorname} {mieter.nachname}<br/>"
         f"<b>Adresse:</b> {mieter.vorname} {mieter.nachname}<br/>"
-        f"3. Etage, {haus.strasse}, {haus.plz} {haus.stadt}"
+        f"{wohnung.etage}, {haus.strasse}, {haus.plz} {haus.stadt}"
     )
     elements.append(Paragraph(mieter_info, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Abrechnungszeitraum
     abrechnungszeitraum = f"<b>Abrechnungszeitraum:</b> 01.01.{jahr} - 31.12.{jahr}"
+    mietzeitraum  = f"<b>Mietzeitraum:</b>" + mietvertrag.mietbeginn.strftime("%d.%m.%Y") + " bis " + (mietvertrag.mietende.strftime("%d.%m.%Y") if mietvertrag.mietende else f"31.12.{jahr}")
     elements.append(Paragraph(abrechnungszeitraum, styles["Normal"]))
+    elements.append(Paragraph(mietzeitraum, styles["Normal"]))
     elements.append(Spacer(1, 12))
 
     # Tabelle mit Nebenkosten
-    table_data = [["Kostenart", "Gesamtkosten Haus", "Umlageschlüssel", "Ihr Anteil"]]
+    table_data = [["Kostenart", "Gesamtkosten", "Flächenschlüssel", "Mietschlüssel", "Ihr Anteil"]]
     total_kosten = Decimal(0)
 
     for forderung in forderungen:
         # Berechnung des Umlageschlüssels
-        umlageschluessel = Decimal(mietvertrag.wohnung.nebenkosten_groesse) / Decimal(haus.nebenkosten_groesse)
-        mieteranteil = umlageschluessel * Decimal(forderung.gesamtbetrag)
+        umlageschluesselQM = f"{Decimal(forderung.umlageschluesselQM)*100:.2f}%" if forderung.umlageschluesselQM != 1 else ""
+        mieteranteil = Decimal(forderung.anteilbetrag)
         total_kosten += Decimal(mieteranteil)
+
+        umlagefaktormiete = Decimal(forderung.umlageschluesselMietdauer) * 100;  # Umlageschlüssel Mietdauer in Prozent
+        umlagemiete = f"{umlagefaktormiete:.2f}%({forderung.miettage}/{forderung.tageimjahr})" if umlagefaktormiete != 100 else ""
 
         # Kosten in die Tabelle einfügen
         table_data.append([ 
-            f"{forderung.bezeichnung} ({forderung.split_anteil}%)",  # Kostenart mit Split-Anteil
+            f"{forderung.bezeichnung}" + (f"({forderung.split_anteil}%)" if forderung.split_anteil != 100 else "") ,  # Kostenart mit Split-Anteil
             f"{Decimal(forderung.gesamtbetrag):.2f} €",  # Gesamtkosten als Decimal formatiert
-            f"{umlageschluessel:.2%}",  # Umlageschlüssel als Prozent
+            umlageschluesselQM,  # Umlageschlüssel als Prozent
+            umlagemiete,  # Umlageschlüssel Mietdauer als Prozent
             f"{mieteranteil:.2f} €"  # Mieteranteil als Decimal formatiert
         ])
 
     # Tabelle formatieren
-    table = Table(table_data, colWidths=[150, 100, 100, 100])
+    table = Table(table_data, colWidths=[120, 90, 90, 100, 60 ] ) 
     table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
