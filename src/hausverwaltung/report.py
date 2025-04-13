@@ -77,7 +77,7 @@ def create_report(mietvertrag_id, jahr):
             f"{forderung.bezeichnung}" + (f"({forderung.split_anteil}%)" if forderung.split_anteil != 100 else "") ,  # Kostenart mit Split-Anteil
             f"{Decimal(forderung.gesamtbetrag):.2f} €",  # Gesamtkosten als Decimal formatiert
             umlageschluesselQM,  # Umlageschlüssel als Prozent
-            umlagemiete,  # Umlageschlüssel Mietdauer als Prozent
+            umlagemiete,  
             f"{mieteranteil:.2f} €"  # Mieteranteil als Decimal formatiert
         ])
 

@@ -20,6 +20,7 @@ setup(
         "django",
         "djangorestframework",
         "mssql-django >=1.0",
+        "django-reversion"
     ],
     entry_points={  # Definiert den Einstiegspunkt für das CLI
         "console_scripts": [

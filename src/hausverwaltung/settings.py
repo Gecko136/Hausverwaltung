@@ -14,6 +14,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'reversion',  # Für Versionskontrolle
     'rest_framework',  # Wenn du die REST API verwendest
     'hausverwaltung',  # Dein eigenes App
 ]
